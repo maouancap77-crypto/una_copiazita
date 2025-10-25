@@ -389,6 +389,14 @@
                     });
                     upgradeOptions.appendChild(option);
                 });
+                option.addEventListener('click', function() {
+                    applyUpgrade(upgrade.id);
+                    upgradePanel.style.display = 'none';
+                    gameState.paused = false;
+                    gameState.upgradeScreen = false;
+                    gameState.lastUpgradeKills = gameState.kills;
+                    requestAnimationFrame(gameLoop);  // ADICIONADO: Reinicia o loop de animação
+                });
                 
                 upgradePanel.style.display = 'block';
             }
