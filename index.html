@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vampire Survivors Clone</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #111;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100%;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #0a0a2a, #1a1a3a);
+        }
+        
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .ui-panel {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 2px solid #8a0303;
+            border-radius: 8px;
+            padding: 10px;
+            pointer-events: auto;
+        }
+        
+        #stats-panel {
+            top: 10px;
+            left: 10px;
+            min-width: 200px;
+        }
+        
+        #upgrade-panel {
+            bottom: 10px;
+            right: 10px;
+            min-width: 250px;
+            display: none;
+        }
+        
+        #game-over-panel {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            display: none;
+        }
+        
+        h1, h2, h3 {
+            color: #ff4444;
+            margin-bottom: 10px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #aaa;
+        }
+        
+        .stat-value {
+            color: #fff;
+        }
+        
+        button {
+            background-color: #8a0303;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #b30404;
+        }
+        
+        .upgrade-option {
+            background-color: rgba(138, 3, 3, 0.3);
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .upgrade-option:hover {
+            background-color: rgba(138, 3, 3, 0.5);
+        }
+        
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        
+        #instructions {
+            max-width: 600px;
+            text-align: center;
+            margin: 20px 0;
+            line-height: 1.5;
+        }
+        
+        .wave-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #8a0303;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="ui-overlay">
+            <div id="stats-panel" class="ui-panel">
+                <h3>Status</h3>
+                <div class="stat-row">
+                    <span class="stat-label">Vida:</span>
+                    <span id="health-value" class="stat-value">100/100</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Inimigos Mortos:</span>
+                    <span id="kills-value" class="stat-value">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Onda:</span>
+                    <span id="wave-value" class="stat-value">1</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Aprimoramentos:</span>
+                    <span id="upgrades-value" class="stat-value">0</span>
+                </div>
+            </div>
+            
+            <div id="upgrade-panel" class="ui-panel">
+                <h3>Escolha um Aprimoramento</h3>
+                <div id="upgrade-options">
+                    <!-- Opções de aprimoramento serão inseridas aqui via JavaScript -->
+                </div>
+            </div>
+            
+            <div id="game-over-panel" class="ui-panel">
+                <h2>Fim de Jogo!</h2>
+                <p>Você sobreviveu a <span id="final-wave">0</span> ondas</p>
+                <p>Matou <span id="final-kills">0</span> inimigos</p>
+                <button id="restart-button">Jogar Novamente</button>
+            </div>
+            
+            <div class="wave-indicator">
+                <div>Onda: <span id="wave-display">1</span></div>
+                <div>Inimigos: <span id="enemies-display">0</span></div>
+            </div>
+        </div>
+        
+        <div id="start-screen">
+            <h1>Vampire Survivors Clone</h1>
+            <div id="instructions">
+                <p>Movimente o personagem com o mouse. Sobreviva às ondas infinitas de inimigos.</p>
+                <p>A cada 10 inimigos mortos, você recebe um aprimoramento.</p>
+                <p>Após a 5ª onda, aprimoramentos a cada 100 inimigos mortos.</p>
+                <p>Boa sorte!</p>
+            </div>
+            <button id="start-button">Iniciar Jogo</button>
+        </div>
+    </div>
+
+    <script>
+        // Configurações do jogo
+        const config = {
+            playerSpeed: 5,
+            enemySpawnRate: 1000, // ms entre spawns
+            enemySpeed: 2,
+            initialEnemyHealth: 10,
+            enemyDamage: 10,
+            playerHealth: 100,
+            upgradeInterval: 10, // inimigos mortos para aprimoramento
+            upgradeIntervalAfterWave5: 100
+        };
+
+        // Estado do jogo
+        const gameState = {
+            player: null,
+            enemies: [],
+            projectiles: [],
+            particles: [],
+            kills: 0,
+            wave: 1,
+            upgrades: 0,
+            gameOver: false,
+            paused: false,
+            upgradeScreen: false,
+            lastEnemySpawn: 0,
+            lastWaveIncrease: 0,
+            waveEnemiesKilled: 0,
+            enemiesInWave: 0,
+            enemySpawnTimer: 0
+        };
+
+        // Aprimoramentos disponíveis
+        const upgrades = [
+            { id: 'speed', name: 'Velocidade', description: 'Aumenta a velocidade do jogador em 20%' },
+            { id: 'damage', name: 'Dano', description: 'Aumenta o dano das armas em 25%' },
+            { id: 'health', name: 'Vida Máxima', description: 'Aumenta a vida máxima em 50' },
+            { id: 'regen', name: 'Regeneração', description: 'Regenera 1 de vida por segundo' },
+            { id: 'fireRate', name: 'Taxa de Tiro', description: 'Aumenta a taxa de tiro em 30%' },
+            { id: 'area', name: 'Área de Efeito', description: 'Aumenta a área de efeito das armas em 25%' }
+        ];
+
+        // Inicialização
+        window.onload = function() {
+            const canvas = document.getElementById('game-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Ajustar tamanho do canvas
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Elementos da UI
+            const startScreen = document.getElementById('start-screen');
+            const startButton = document.getElementById('start-button');
+            const upgradePanel = document.getElementById('upgrade-panel');
+            const upgradeOptions = document.getElementById('upgrade-options');
+            const gameOverPanel = document.getElementById('game-over-panel');
+            const restartButton = document.getElementById('restart-button');
+            
+            // Iniciar jogo
+            startButton.addEventListener('click', function() {
+                startScreen.style.display = 'none';
+                initGame();
+                gameLoop();
+            });
+            
+            // Reiniciar jogo
+            restartButton.addEventListener('click', function() {
+                gameOverPanel.style.display = 'none';
+                initGame();
+                gameLoop();
+            });
+            
+            // Inicializar o jogo
+            function initGame() {
+                // Resetar estado do jogo
+                gameState.player = {
+                    x: canvas.width / 2,
+                    y: canvas.height / 2,
+                    width: 30,
+                    height: 30,
+                    speed: config.playerSpeed,
+                    health: config.playerHealth,
+                    maxHealth: config.playerHealth,
+                    damage: 10,
+                    fireRate: 1000, // ms entre tiros
+                    lastShot: 0,
+                    upgrades: {},
+                    regen: 0
+                };
+                
+                gameState.enemies = [];
+                gameState.projectiles = [];
+                gameState.particles = [];
+                gameState.kills = 0;
+                gameState.wave = 1;
+                gameState.upgrades = 0;
+                gameState.gameOver = false;
+                gameState.paused = false;
+                gameState.upgradeScreen = false;
+                gameState.lastEnemySpawn = 0;
+                gameState.lastWaveIncrease = 0;
+                gameState.waveEnemiesKilled = 0;
+                gameState.enemiesInWave = 0;
+                gameState.enemySpawnTimer = 0;
+                
+                updateUI();
+            }
+            
+            // Atualizar UI
+            function updateUI() {
+                document.getElementById('health-value').textContent = 
+                    `${Math.max(0, Math.floor(gameState.player.health))}/${gameState.player.maxHealth}`;
+                document.getElementById('kills-value').textContent = gameState.kills;
+                document.getElementById('wave-value').textContent = gameState.wave;
+                document.getElementById('upgrades-value').textContent = gameState.upgrades;
+                document.getElementById('wave-display').textContent = gameState.wave;
+                document.getElementById('enemies-display').textContent = gameState.enemies.length;
+            }
+            
+            // Mostrar tela de aprimoramentos
+            function showUpgradeScreen() {
+                gameState.paused = true;
+                gameState.upgradeScreen = true;
+                
+                // Limpar opções anteriores
+                upgradeOptions.innerHTML = '';
+                
+                // Selecionar 3 aprimoramentos aleatórios
+                const availableUpgrades = [...upgrades];
+                const selectedUpgrades = [];
+                
+                for (let i = 0; i < 3 && availableUpgrades.length > 0; i++) {
+                    const randomIndex = Math.floor(Math.random() * availableUpgrades.length);
+                    selectedUpgrades.push(availableUpgrades[randomIndex]);
+                    availableUpgrades.splice(randomIndex, 1);
+                }
+                
+                // Criar elementos para cada aprimoramento
+                selectedUpgrades.forEach(upgrade => {
+                    const option = document.createElement('div');
+                    option.className = 'upgrade-option';
+                    option.innerHTML = `
+                        <h4>${upgrade.name}</h4>
+                        <p>${upgrade.description}</p>
+                    `;
+                    option.addEventListener('click', function() {
+                        applyUpgrade(upgrade.id);
+                        upgradePanel.style.display = 'none';
+                        gameState.paused = false;
+                        gameState.upgradeScreen = false;
+                    });
+                    upgradeOptions.appendChild(option);
+                });
+                
+                upgradePanel.style.display = 'block';
+            }
+            
+            // Aplicar aprimoramento
+            function applyUpgrade(upgradeId) {
+                gameState.upgrades++;
+                
+                switch(upgradeId) {
+                    case 'speed':
+                        gameState.player.speed *= 1.2;
+                        break;
+                    case 'damage':
+                        gameState.player.damage *= 1.25;
+                        break;
+                    case 'health':
+                        gameState.player.maxHealth += 50;
+                        gameState.player.health += 50;
+                        break;
+                    case 'regen':
+                        gameState.player.regen += 1;
+                        break;
+                    case 'fireRate':
+                        gameState.player.fireRate *= 0.7;
+                        break;
+                    case 'area':
+                        // Implementar área de efeito
+                        break;
+                }
+                
+                gameState.player.upgrades[upgradeId] = (gameState.player.upgrades[upgradeId] || 0) + 1;
+                updateUI();
+            }
+            
+            // Loop principal do jogo
+            function gameLoop() {
+                if (gameState.gameOver || gameState.paused) {
+                    if (gameState.gameOver) {
+                        document.getElementById('final-wave').textContent = gameState.wave;
+                        document.getElementById('final-kills').textContent = gameState.kills;
+                        gameOverPanel.style.display = 'block';
+                    }
+                    return;
+                }
+                
+                // Limpar canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Atualizar jogador
+                updatePlayer();
+                
+                // Atualizar inimigos
+                updateEnemies();
+                
+                // Atualizar projéteis
+                updateProjectiles();
+                
+                // Atualizar partículas
+                updateParticles();
+                
+                // Verificar se é hora de spawnar inimigos
+                spawnEnemies();
+                
+                // Verificar se é hora de aumentar a onda
+                checkWaveIncrease();
+                
+                // Verificar se é hora de mostrar aprimoramentos
+                checkUpgrade();
+                
+                // Desenhar tudo
+                drawIsometricGrid();
+                drawPlayer();
+                drawEnemies();
+                drawProjectiles();
+                drawParticles();
+                
+                // Atualizar UI
+                updateUI();
+                
+                // Continuar o loop
+                requestAnimationFrame(gameLoop);
+            }
+            
+            // Atualizar jogador
+            function updatePlayer() {
+                // Movimentação com o mouse
+                const mouseX = canvas.width / 2;
+                const mouseY = canvas.height / 2;
+                
+                // Calcular direção do movimento
+                const dx = mouseX - gameState.player.x;
+                const dy = mouseY - gameState.player.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // Mover jogador se não estiver muito perto do mouse
+                if (distance > 10) {
+                    gameState.player.x += (dx / distance) * gameState.player.speed;
+                    gameState.player.y += (dy / distance) * gameState.player.speed;
+                }
+                
+                // Manter jogador dentro dos limites
+                gameState.player.x = Math.max(gameState.player.width / 2, 
+                    Math.min(canvas.width - gameState.player.width / 2, gameState.player.x));
+                gameState.player.y = Math.max(gameState.player.height / 2, 
+                    Math.min(canvas.height - gameState.player.height / 2, gameState.player.y));
+                
+                // Atirar
+                const now = Date.now();
+                if (now - gameState.player.lastShot > gameState.player.fireRate) {
+                    shoot();
+                    gameState.player.lastShot = now;
+                }
+                
+                // Regeneração
+                if (gameState.player.regen > 0 && now % 1000 < 16) {
+                    gameState.player.health = Math.min(gameState.player.maxHealth, 
+                        gameState.player.health + gameState.player.regen);
+                }
+            }
+            
+            // Atirar
+            function shoot() {
+                // Criar projéteis em direções diferentes
+                const directions = [
+                    { x: 1, y: 0 },   // Direita
+                    { x: -1, y: 0 },  // Esquerda
+                    { x: 0, y: 1 },   // Baixo
+                    { x: 0, y: -1 },  // Cima
+                    { x: 0.7, y: 0.7 }, // Diagonal inferior direita
+                    { x: -0.7, y: 0.7 }, // Diagonal inferior esquerda
+                    { x: 0.7, y: -0.7 }, // Diagonal superior direita
+                    { x: -0.7, y: -0.7 } // Diagonal superior esquerda
+                ];
+                
+                directions.forEach(dir => {
+                    gameState.projectiles.push({
+                        x: gameState.player.x,
+                        y: gameState.player.y,
+                        vx: dir.x * 10,
+                        vy: dir.y * 10,
+                        width: 10,
+                        height: 10,
+                        damage: gameState.player.damage,
+                        lifetime: 1000 // ms
+                    });
+                });
+            }
+            
+            // Atualizar inimigos
+            function updateEnemies() {
+                for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+                    const enemy = gameState.enemies[i];
+                    
+                    // Mover em direção ao jogador
+                    const dx = gameState.player.x - enemy.x;
+                    const dy = gameState.player.y - enemy.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    enemy.x += (dx / distance) * enemy.speed;
+                    enemy.y += (dy / distance) * enemy.speed;
+                    
+                    // Verificar colisão com jogador
+                    if (distance < (gameState.player.width / 2 + enemy.width / 2)) {
+                        gameState.player.health -= enemy.damage;
+                        
+                        // Criar partículas de dano
+                        for (let j = 0; j < 5; j++) {
+                            gameState.particles.push({
+                                x: enemy.x,
+                                y: enemy.y,
+                                vx: (Math.random() - 0.5) * 5,
+                                vy: (Math.random() - 0.5) * 5,
+                                life: 30,
+                                color: '#ff0000'
+                            });
+                        }
+                        
+                        // Remover inimigo
+                        gameState.enemies.splice(i, 1);
+                        gameState.waveEnemiesKilled++;
+                        
+                        // Verificar morte do jogador
+                        if (gameState.player.health <= 0) {
+                            gameState.gameOver = true;
+                        }
+                    }
+                }
+            }
+            
+            // Atualizar projéteis
+            function updateProjectiles() {
+                const now = Date.now();
+                
+                for (let i = gameState.projectiles.length - 1; i >= 0; i--) {
+                    const projectile = gameState.projectiles[i];
+                    
+                    // Mover projétil
+                    projectile.x += projectile.vx;
+                    projectile.y += projectile.vy;
+                    
+                    // Verificar se saiu da tela
+                    if (projectile.x < 0 || projectile.x > canvas.width || 
+                        projectile.y < 0 || projectile.y > canvas.height) {
+                        gameState.projectiles.splice(i, 1);
+                        continue;
+                    }
+                    
+                    // Verificar tempo de vida
+                    if (now - projectile.created > projectile.lifetime) {
+                        gameState.projectiles.splice(i, 1);
+                        continue;
+                    }
+                    
+                    // Verificar colisão com inimigos
+                    for (let j = gameState.enemies.length - 1; j >= 0; j--) {
+                        const enemy = gameState.enemies[j];
+                        const dx = projectile.x - enemy.x;
+                        const dy = projectile.y - enemy.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < (projectile.width / 2 + enemy.width / 2)) {
+                            // Aplicar dano
+                            enemy.health -= projectile.damage;
+                            
+                            // Criar partículas
+                            for (let k = 0; k < 3; k++) {
+                                gameState.particles.push({
+                                    x: enemy.x,
+                                    y: enemy.y,
+                                    vx: (Math.random() - 0.5) * 3,
+                                    vy: (Math.random() - 0.5) * 3,
+                                    life: 20,
+                                    color: '#ffff00'
+                                });
+                            }
+                            
+                            // Remover projétil
+                            gameState.projectiles.splice(i, 1);
+                            
+                            // Verificar se inimigo morreu
+                            if (enemy.health <= 0) {
+                                gameState.enemies.splice(j, 1);
+                                gameState.kills++;
+                                gameState.waveEnemiesKilled++;
+                                
+                                // Criar mais partículas
+                                for (let k = 0; k < 10; k++) {
+                                    gameState.particles.push({
+                                        x: enemy.x,
+                                        y: enemy.y,
+                                        vx: (Math.random() - 0.5) * 5,
+                                        vy: (Math.random() - 0.5) * 5,
+                                        life: 30,
+                                        color: '#ff4444'
+                                    });
+                                }
+                            }
+                            
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Atualizar partículas
+            function updateParticles() {
+                for (let i = gameState.particles.length - 1; i >= 0; i--) {
+                    const particle = gameState.particles[i];
+                    
+                    // Mover partícula
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    particle.life--;
+                    
+                    // Remover partícula se a vida acabou
+                    if (particle.life <= 0) {
+                        gameState.particles.splice(i, 1);
+                    }
+                }
+            }
+            
+            // Spawnar inimigos
+            function spawnEnemies() {
+                const now = Date.now();
+                
+                // Calcular taxa de spawn baseada na onda
+                const spawnRate = Math.max(100, config.enemySpawnRate - (gameState.wave * 50));
+                
+                if (now - gameState.lastEnemySpawn > spawnRate && 
+                    gameState.enemies.length < 10 + gameState.wave * 2) {
+                    
+                    // Posição aleatória fora da tela
+                    let x, y;
+                    const side = Math.floor(Math.random() * 4);
+                    
+                    switch(side) {
+                        case 0: // Topo
+                            x = Math.random() * canvas.width;
+                            y = -50;
+                            break;
+                        case 1: // Direita
+                            x = canvas.width + 50;
+                            y = Math.random() * canvas.height;
+                            break;
+                        case 2: // Baixo
+                            x = Math.random() * canvas.width;
+                            y = canvas.height + 50;
+                            break;
+                        case 3: // Esquerda
+                            x = -50;
+                            y = Math.random() * canvas.height;
+                            break;
+                    }
+                    
+                    // Criar inimigo
+                    const enemy = {
+                        x: x,
+                        y: y,
+                        width: 25,
+                        height: 25,
+                        speed: config.enemySpeed + (gameState.wave * 0.1),
+                        health: config.initialEnemyHealth + (gameState.wave * 2),
+                        maxHealth: config.initialEnemyHealth + (gameState.wave * 2),
+                        damage: config.enemyDamage,
+                        color: `hsl(${Math.random() * 60}, 100%, 50%)` // Tons de vermelho/laranja
+                    };
+                    
+                    gameState.enemies.push(enemy);
+                    gameState.lastEnemySpawn = now;
+                    gameState.enemiesInWave++;
+                }
+            }
+            
+            // Verificar aumento de onda
+            function checkWaveIncrease() {
+                if (gameState.waveEnemiesKilled >= 10 + (gameState.wave * 5)) {
+                    gameState.wave++;
+                    gameState.waveEnemiesKilled = 0;
+                    gameState.enemiesInWave = 0;
+                }
+            }
+            
+            // Verificar aprimoramentos
+            function checkUpgrade() {
+                const upgradeThreshold = gameState.wave >= 5 ? 
+                    config.upgradeIntervalAfterWave5 : config.upgradeInterval;
+                
+                if (gameState.kills > 0 && gameState.kills % upgradeThreshold === 0 && 
+                    !gameState.upgradeScreen && !gameState.paused) {
+                    showUpgradeScreen();
+                }
+            }
+            
+            // Desenhar grade isométrica
+            function drawIsometricGrid() {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.lineWidth = 1;
+                
+                const gridSize = 50;
+                const width = canvas.width;
+                const height = canvas.height;
+                
+                // Desenhar linhas horizontais
+                for (let y = 0; y < height; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                    ctx.stroke();
+                }
+                
+                // Desenhar linhas verticais
+                for (let x = 0; x < width; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
+                    ctx.stroke();
+                }
+            }
+            
+            // Desenhar jogador
+            function drawPlayer() {
+                const player = gameState.player;
+                
+                // Desenhar jogador como um losango (visão isométrica)
+                ctx.fillStyle = '#3498db';
+                ctx.beginPath();
+                ctx.moveTo(player.x, player.y - player.height / 2);
+                ctx.lineTo(player.x + player.width / 2, player.y);
+                ctx.lineTo(player.x, player.y + player.height / 2);
+                ctx.lineTo(player.x - player.width / 2, player.y);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Barra de vida
+                const barWidth = player.width;
+                const barHeight = 5;
+                const barY = player.y - player.height / 2 - 10;
+                
+                // Fundo da barra
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(player.x - barWidth / 2, barY, barWidth, barHeight);
+                
+                // Vida atual
+                const healthPercent = player.health / player.maxHealth;
+                ctx.fillStyle = healthPercent > 0.5 ? '#2ecc71' : 
+                               healthPercent > 0.25 ? '#f39c12' : '#e74c3c';
+                ctx.fillRect(player.x - barWidth / 2, barY, barWidth * healthPercent, barHeight);
+            }
+            
+            // Desenhar inimigos
+            function drawEnemies() {
+                gameState.enemies.forEach(enemy => {
+                    // Desenhar inimigo como um losango
+                    ctx.fillStyle = enemy.color;
+                    ctx.beginPath();
+                    ctx.moveTo(enemy.x, enemy.y - enemy.height / 2);
+                    ctx.lineTo(enemy.x + enemy.width / 2, enemy.y);
+                    ctx.lineTo(enemy.x, enemy.y + enemy.height / 2);
+                    ctx.lineTo(enemy.x - enemy.width / 2, enemy.y);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Barra de vida
+                    const barWidth = enemy.width;
+                    const barHeight = 3;
+                    const barY = enemy.y - enemy.height / 2 - 8;
+                    
+                    // Fundo da barra
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                    ctx.fillRect(enemy.x - barWidth / 2, barY, barWidth, barHeight);
+                    
+                    // Vida atual
+                    const healthPercent = enemy.health / enemy.maxHealth;
+                    ctx.fillStyle = healthPercent > 0.5 ? '#2ecc71' : 
+                                   healthPercent > 0.25 ? '#f39c12' : '#e74c3c';
+                    ctx.fillRect(enemy.x - barWidth / 2, barY, barWidth * healthPercent, barHeight);
+                });
+            }
+            
+            // Desenhar projéteis
+            function drawProjectiles() {
+                gameState.projectiles.forEach(projectile => {
+                    ctx.fillStyle = '#f1c40f';
+                    ctx.beginPath();
+                    ctx.arc(projectile.x, projectile.y, projectile.width / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+            
+            // Desenhar partículas
+            function drawParticles() {
+                gameState.particles.forEach(particle => {
+                    ctx.fillStyle = particle.color;
+                    ctx.globalAlpha = particle.life / 30;
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                });
+            }
+        };
+    </script>
+</body>
+</html>
