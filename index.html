@@ -1,4 +1,4 @@
-corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -246,7 +246,7 @@ corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE 
             enemySpawnTimer: 0,
             mouseX: 0,
             mouseY: 0,
-            lastUpgradeKills: 0 // ADICIONADO: Controla quando o último upgrade foi dado
+            lastUpgradeKills: 0
         };
 
         // Aprimoramentos disponíveis
@@ -305,7 +305,6 @@ corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE 
             
             // Inicializar o jogo
             function initGame() {
-                // Resetar estado do jogo
                 gameState.player = {
                     x: canvas.width / 2,
                     y: canvas.height / 2,
@@ -337,7 +336,7 @@ corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE 
                 gameState.enemySpawnTimer = 0;
                 gameState.mouseX = canvas.width / 2;
                 gameState.mouseY = canvas.height / 2;
-                gameState.lastUpgradeKills = 0; // RESETADO
+                gameState.lastUpgradeKills = 0;
                 
                 updateUI();
             }
@@ -380,22 +379,16 @@ corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE 
                         <p>${upgrade.description}</p>
                     `;
                     option.addEventListener('click', function() {
+                        // console.log('Upgrade selecionado:', upgrade.id); // Descomente para depuração
                         applyUpgrade(upgrade.id);
                         upgradePanel.style.display = 'none';
                         gameState.paused = false;
                         gameState.upgradeScreen = false;
-                        // ATUALIZADO: Marcar que o upgrade foi dado para estes kills
                         gameState.lastUpgradeKills = gameState.kills;
+                        // console.log('Retomando gameLoop, paused:', gameState.paused); // Descomente para depuração
+                        requestAnimationFrame(gameLoop);
                     });
                     upgradeOptions.appendChild(option);
-                });
-                option.addEventListener('click', function() {
-                    applyUpgrade(upgrade.id);
-                    upgradePanel.style.display = 'none';
-                    gameState.paused = false;
-                    gameState.upgradeScreen = false;
-                    gameState.lastUpgradeKills = gameState.kills;
-                    requestAnimationFrame(gameLoop);  // ADICIONADO: Reinicia o loop de animação
                 });
                 
                 upgradePanel.style.display = 'block';
@@ -433,12 +426,16 @@ corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE 
             
             // Loop principal do jogo
             function gameLoop() {
-                if (gameState.gameOver || gameState.paused) {
-                    if (gameState.gameOver) {
-                        document.getElementById('final-wave').textContent = gameState.wave;
-                        document.getElementById('final-kills').textContent = gameState.kills;
-                        gameOverPanel.style.display = 'block';
-                    }
+                // console.log('gameLoop chamado, paused:', gameState.paused, 'upgradeScreen:', gameState.upgradeScreen); // Descomente para depuração
+                if (gameState.gameOver) {
+                    document.getElementById('final-wave').textContent = gameState.wave;
+                    document.getElementById('final-kills').textContent = gameState.kills;
+                    gameOverPanel.style.display = 'block';
+                    return;
+                }
+                
+                if (gameState.paused) {
+                    requestAnimationFrame(gameLoop);
                     return;
                 }
                 
@@ -519,7 +516,6 @@ corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE 
             
             // Atirar
             function shoot() {
-                // Criar projéteis em direções diferentes
                 const directions = [
                     { x: 1, y: 0 },   // Direita
                     { x: -1, y: 0 },  // Esquerda
@@ -683,13 +679,11 @@ corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE 
             function spawnEnemies() {
                 const now = Date.now();
                 
-                // Calcular taxa de spawn baseada na onda
                 const spawnRate = Math.max(100, config.enemySpawnRate - (gameState.wave * 50));
                 
                 if (now - gameState.lastEnemySpawn > spawnRate && 
                     gameState.enemies.length < 10 + gameState.wave * 2) {
                     
-                    // Posição aleatória fora da tela
                     let x, y;
                     const side = Math.floor(Math.random() * 4);
                     
@@ -712,7 +706,6 @@ corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE 
                             break;
                     }
                     
-                    // Criar inimigo
                     const enemy = {
                         x: x,
                         y: y,
@@ -740,13 +733,14 @@ corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE 
                 }
             }
             
-            // Verificar aprimoramentos - CORREÇÃO PRINCIPAL AQUI
+            // Verificar aprimoramentos
             function checkUpgrade() {
                 const upgradeThreshold = gameState.wave >= 5 ? 
                     config.upgradeIntervalAfterWave5 : config.upgradeInterval;
                 
-                // Verificar se atingimos um novo limiar de kills desde o último upgrade
                 const killsSinceLastUpgrade = gameState.kills - gameState.lastUpgradeKills;
+                
+                // console.log('checkUpgrade: kills=', gameState.kills, 'lastUpgradeKills=', gameState.lastUpgradeKills, 'threshold=', upgradeThreshold); // Descomente para depuração
                 
                 if (killsSinceLastUpgrade >= upgradeThreshold && 
                     !gameState.upgradeScreen && !gameState.paused) {
@@ -763,7 +757,6 @@ corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE 
                 const width = canvas.width;
                 const height = canvas.height;
                 
-                // Desenhar linhas horizontais
                 for (let y = 0; y < height; y += gridSize) {
                     ctx.beginPath();
                     ctx.moveTo(0, y);
@@ -771,7 +764,6 @@ corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE 
                     ctx.stroke();
                 }
                 
-                // Desenhar linhas verticais
                 for (let x = 0; x < width; x += gridSize) {
                     ctx.beginPath();
                     ctx.moveTo(x, 0);
@@ -784,7 +776,6 @@ corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE 
             function drawPlayer() {
                 const player = gameState.player;
                 
-                // Desenhar jogador como um losango (visão isométrica)
                 ctx.fillStyle = '#3498db';
                 ctx.beginPath();
                 ctx.moveTo(player.x, player.y - player.height / 2);
@@ -794,16 +785,13 @@ corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE 
                 ctx.closePath();
                 ctx.fill();
                 
-                // Barra de vida
                 const barWidth = player.width;
                 const barHeight = 5;
                 const barY = player.y - player.height / 2 - 10;
                 
-                // Fundo da barra
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
                 ctx.fillRect(player.x - barWidth / 2, barY, barWidth, barHeight);
                 
-                // Vida atual
                 const healthPercent = player.health / player.maxHealth;
                 ctx.fillStyle = healthPercent > 0.5 ? '#2ecc71' : 
                                healthPercent > 0.25 ? '#f39c12' : '#e74c3c';
@@ -813,7 +801,6 @@ corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE 
             // Desenhar inimigos
             function drawEnemies() {
                 gameState.enemies.forEach(enemy => {
-                    // Desenhar inimigo como um losango
                     ctx.fillStyle = enemy.color;
                     ctx.beginPath();
                     ctx.moveTo(enemy.x, enemy.y - enemy.height / 2);
@@ -823,16 +810,13 @@ corrija e me retorne o index.html total pronto para deploy corrigido: <!DOCTYPE 
                     ctx.closePath();
                     ctx.fill();
                     
-                    // Barra de vida
                     const barWidth = enemy.width;
                     const barHeight = 3;
                     const barY = enemy.y - enemy.height / 2 - 8;
                     
-                    // Fundo da barra
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
                     ctx.fillRect(enemy.x - barWidth / 2, barY, barWidth, barHeight);
                     
-                    // Vida atual
                     const healthPercent = enemy.health / enemy.maxHealth;
                     ctx.fillStyle = healthPercent > 0.5 ? '#2ecc71' : 
                                    healthPercent > 0.25 ? '#f39c12' : '#e74c3c';
