@@ -26,6 +26,7 @@
             width: 100%;
             flex-grow: 1;
             overflow: hidden;
+            cursor: none; /* Esconde o cursor padrão */
         }
         
         #game-canvas {
@@ -242,7 +243,9 @@
             lastWaveIncrease: 0,
             waveEnemiesKilled: 0,
             enemiesInWave: 0,
-            enemySpawnTimer: 0
+            enemySpawnTimer: 0,
+            mouseX: 0,
+            mouseY: 0
         };
 
         // Aprimoramentos disponíveis
@@ -259,6 +262,7 @@
         window.onload = function() {
             const canvas = document.getElementById('game-canvas');
             const ctx = canvas.getContext('2d');
+            const gameContainer = document.getElementById('game-container');
             
             // Ajustar tamanho do canvas
             function resizeCanvas() {
@@ -268,6 +272,13 @@
             
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
+            
+            // Capturar movimento do mouse
+            gameContainer.addEventListener('mousemove', function(e) {
+                const rect = canvas.getBoundingClientRect();
+                gameState.mouseX = e.clientX - rect.left;
+                gameState.mouseY = e.clientY - rect.top;
+            });
             
             // Elementos da UI
             const startScreen = document.getElementById('start-screen');
@@ -323,6 +334,8 @@
                 gameState.waveEnemiesKilled = 0;
                 gameState.enemiesInWave = 0;
                 gameState.enemySpawnTimer = 0;
+                gameState.mouseX = canvas.width / 2;
+                gameState.mouseY = canvas.height / 2;
                 
                 updateUI();
             }
@@ -455,11 +468,11 @@
                 requestAnimationFrame(gameLoop);
             }
             
-            // Atualizar jogador
+            // Atualizar jogador - CORREÇÃO AQUI
             function updatePlayer() {
-                // Movimentação com o mouse
-                const mouseX = canvas.width / 2;
-                const mouseY = canvas.height / 2;
+                // Usar a posição real do mouse em vez de coordenadas fixas
+                const mouseX = gameState.mouseX;
+                const mouseY = gameState.mouseY;
                 
                 // Calcular direção do movimento
                 const dx = mouseX - gameState.player.x;
@@ -515,7 +528,8 @@
                         width: 10,
                         height: 10,
                         damage: gameState.player.damage,
-                        lifetime: 1000 // ms
+                        lifetime: 1000, // ms
+                        created: Date.now() // Adicionar timestamp de criação
                     });
                 });
             }
