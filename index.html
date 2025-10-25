@@ -26,7 +26,7 @@
             width: 100%;
             flex-grow: 1;
             overflow: hidden;
-            cursor: none; /* Esconde o cursor padrão */
+            cursor: none;
         }
         
         #game-canvas {
@@ -218,12 +218,12 @@
         // Configurações do jogo
         const config = {
             playerSpeed: 5,
-            enemySpawnRate: 1000, // ms entre spawns
+            enemySpawnRate: 1000,
             enemySpeed: 2,
             initialEnemyHealth: 10,
             enemyDamage: 10,
             playerHealth: 100,
-            upgradeInterval: 10, // inimigos mortos para aprimoramento
+            upgradeInterval: 10,
             upgradeIntervalAfterWave5: 100
         };
 
@@ -245,7 +245,8 @@
             enemiesInWave: 0,
             enemySpawnTimer: 0,
             mouseX: 0,
-            mouseY: 0
+            mouseY: 0,
+            lastUpgradeKills: 0 // ADICIONADO: Controla quando o último upgrade foi dado
         };
 
         // Aprimoramentos disponíveis
@@ -314,7 +315,7 @@
                     health: config.playerHealth,
                     maxHealth: config.playerHealth,
                     damage: 10,
-                    fireRate: 1000, // ms entre tiros
+                    fireRate: 1000,
                     lastShot: 0,
                     upgrades: {},
                     regen: 0
@@ -336,6 +337,7 @@
                 gameState.enemySpawnTimer = 0;
                 gameState.mouseX = canvas.width / 2;
                 gameState.mouseY = canvas.height / 2;
+                gameState.lastUpgradeKills = 0; // RESETADO
                 
                 updateUI();
             }
@@ -382,6 +384,8 @@
                         upgradePanel.style.display = 'none';
                         gameState.paused = false;
                         gameState.upgradeScreen = false;
+                        // ATUALIZADO: Marcar que o upgrade foi dado para estes kills
+                        gameState.lastUpgradeKills = gameState.kills;
                     });
                     upgradeOptions.appendChild(option);
                 });
@@ -468,9 +472,9 @@
                 requestAnimationFrame(gameLoop);
             }
             
-            // Atualizar jogador - CORREÇÃO AQUI
+            // Atualizar jogador
             function updatePlayer() {
-                // Usar a posição real do mouse em vez de coordenadas fixas
+                // Usar a posição real do mouse
                 const mouseX = gameState.mouseX;
                 const mouseY = gameState.mouseY;
                 
@@ -528,8 +532,8 @@
                         width: 10,
                         height: 10,
                         damage: gameState.player.damage,
-                        lifetime: 1000, // ms
-                        created: Date.now() // Adicionar timestamp de criação
+                        lifetime: 1000,
+                        created: Date.now()
                     });
                 });
             }
@@ -710,7 +714,7 @@
                         health: config.initialEnemyHealth + (gameState.wave * 2),
                         maxHealth: config.initialEnemyHealth + (gameState.wave * 2),
                         damage: config.enemyDamage,
-                        color: `hsl(${Math.random() * 60}, 100%, 50%)` // Tons de vermelho/laranja
+                        color: `hsl(${Math.random() * 60}, 100%, 50%)`
                     };
                     
                     gameState.enemies.push(enemy);
@@ -728,12 +732,15 @@
                 }
             }
             
-            // Verificar aprimoramentos
+            // Verificar aprimoramentos - CORREÇÃO PRINCIPAL AQUI
             function checkUpgrade() {
                 const upgradeThreshold = gameState.wave >= 5 ? 
                     config.upgradeIntervalAfterWave5 : config.upgradeInterval;
                 
-                if (gameState.kills > 0 && gameState.kills % upgradeThreshold === 0 && 
+                // Verificar se atingimos um novo limiar de kills desde o último upgrade
+                const killsSinceLastUpgrade = gameState.kills - gameState.lastUpgradeKills;
+                
+                if (killsSinceLastUpgrade >= upgradeThreshold && 
                     !gameState.upgradeScreen && !gameState.paused) {
                     showUpgradeScreen();
                 }
